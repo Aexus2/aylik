@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#0e1412" />
+  <meta name="description" content="Aylık — maaş, gider, kredi takibi ve erken kapama" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <title>Aylık</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg0: #0e1412;
+      --bg1: #15201c;
+      --bg2: #1c2a25;
+      --line: rgba(180, 220, 200, 0.12);
+      --text: #e8f0eb;
+      --muted: #8fa398;
+      --accent: #3dd68c;
+      --accent-dim: rgba(61, 214, 140, 0.14);
+      --warn: #e8b84a;
+      --danger: #ff7a6e;
+      --ok: #3dd68c;
+      --radius: 18px;
+      --safe-b: env(safe-area-inset-bottom, 0px);
+      --safe-t: env(safe-area-inset-top, 0px);
+      --font-display: "Syne", sans-serif;
+      --font-body: "Manrope", sans-serif;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: var(--font-body);
+      color: var(--text);
+      background:
+        radial-gradient(120% 80% at 10% -10%, rgba(61, 214, 140, 0.18), transparent 50%),
+        radial-gradient(90% 60% at 100% 0%, rgba(232, 184, 74, 0.08), transparent 45%),
+        linear-gradient(180deg, #101816 0%, var(--bg0) 40%, #0b100e 100%);
+      background-attachment: fixed;
+      min-height: 100dvh;
+      padding-bottom: calc(72px + var(--safe-b));
+    }
+
+    button, input, select, textarea { font: inherit; color: inherit; }
+    button {
+      border: 0;
+      background: none;
+      cursor: pointer;
+    }
+
+    .app {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: calc(12px + var(--safe-t)) 16px 24px;
+    }
+
+    .brand-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+    .brand {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 2rem;
+      letter-spacing: -0.04em;
+      line-height: 1;
+    }
+    .brand span { color: var(--accent); }
+    .month-chip {
+      font-size: 0.78rem;
+      color: var(--muted);
+      background: var(--bg2);
+      border: 1px solid var(--line);
+      padding: 6px 10px;
+      border-radius: 999px;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      border-radius: 24px;
+      padding: 22px 20px 20px;
+      background:
+        linear-gradient(145deg, rgba(61, 214, 140, 0.16), transparent 55%),
+        var(--bg1);
+      border: 1px solid var(--line);
+      margin-bottom: 16px;
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      right: -40px;
+      top: -40px;
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(61, 214, 140, 0.22), transparent 70%);
+      pointer-events: none;
+    }
+    .hero-label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .hero-amount {
+      font-family: var(--font-display);
+      font-size: 2.35rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.05;
+    }
+    .hero-amount.neg { color: var(--danger); }
+    .hero-amount.pos { color: var(--accent); }
+    .hero-sub {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.4;
+      max-width: 32ch;
+    }
+    .tip {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: var(--accent-dim);
+      border: 1px solid rgba(61, 214, 140, 0.25);
+      font-size: 0.88rem;
+      line-height: 1.45;
+    }
+    .tip strong { color: var(--accent); font-weight: 700; }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .stat {
+      background: var(--bg1);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px 10px;
+      text-align: center;
+    }
+    .stat b {
+      display: block;
+      font-family: var(--font-display);
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+    .stat span { font-size: 0.72rem; color: var(--muted); }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 8px 0 10px;
+    }
+    .section-head h2 {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .list { display: flex; flex-direction: column; gap: 8px; }
+    .item {
+      background: var(--bg1);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+      animation: rise 0.35s ease both;
+    }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: none; }
+    }
+    .item-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .item-title { font-weight: 600; font-size: 0.98rem; }
+    .item-meta { color: var(--muted); font-size: 0.8rem; margin-top: 3px; }
+    .item-amt { font-weight: 700; white-space: nowrap; }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: var(--bg2);
+      color: var(--muted);
+      border: 1px solid var(--line);
+    }
+    .pill.due { color: var(--warn); border-color: rgba(232, 184, 74, 0.35); background: rgba(232, 184, 74, 0.1); }
+    .pill.paid { color: var(--ok); border-color: rgba(61, 214, 140, 0.35); background: var(--accent-dim); }
+    .pill.deferred { color: #9eb6ff; border-color: rgba(158, 182, 255, 0.35); background: rgba(158, 182, 255, 0.1); }
+    .pill.overdue { color: var(--danger); border-color: rgba(255, 122, 110, 0.35); background: rgba(255, 122, 110, 0.1); }
+
+    .actions { display: flex; flex-wrap: wrap; gap: 6px; }
+    .btn {
+      padding: 9px 12px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 0.82rem;
+      background: var(--bg2);
+      border: 1px solid var(--line);
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn.primary {
+      background: var(--accent);
+      color: #062016;
+      border-color: transparent;
+    }
+    .btn.warn { color: var(--warn); }
+    .btn.danger { color: var(--danger); }
+    .btn.ghost { background: transparent; }
+
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 28px 12px;
+      font-size: 0.92rem;
+    }
+
+    .nav {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 0;
+      width: min(480px, 100%);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+      padding: 10px 12px calc(10px + var(--safe-b));
+      background: rgba(14, 20, 18, 0.88);
+      backdrop-filter: blur(16px);
+      border-top: 1px solid var(--line);
+      z-index: 40;
+    }
+    .nav button {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 4px;
+      color: var(--muted);
+      font-size: 0.68rem;
+      font-weight: 600;
+      border-radius: 12px;
+    }
+    .nav button.active { color: var(--accent); background: var(--accent-dim); }
+    .nav svg { width: 20px; height: 20px; }
+
+    .sheet-bg {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      z-index: 50;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .sheet-bg.open { opacity: 1; pointer-events: auto; }
+    .sheet {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%) translateY(110%);
+      bottom: 0;
+      width: min(480px, 100%);
+      max-height: 88dvh;
+      overflow: auto;
+      background: var(--bg1);
+      border: 1px solid var(--line);
+      border-bottom: 0;
+      border-radius: 22px 22px 0 0;
+      padding: 16px 16px calc(20px + var(--safe-b));
+      z-index: 51;
+      transition: transform 0.28s cubic-bezier(0.2, 0.9, 0.2, 1);
+    }
+    .sheet.open { transform: translateX(-50%) translateY(0); }
+    .sheet h3 {
+      margin: 4px 0 14px;
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      letter-spacing: -0.02em;
+    }
+    .handle {
+      width: 36px;
+      height: 4px;
+      border-radius: 999px;
+      background: var(--line);
+      margin: 0 auto 12px;
+    }
+    .field { margin-bottom: 12px; }
+    .field label {
+      display: block;
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .field input, .field select, .field textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: var(--bg0);
+      outline: none;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus {
+      border-color: rgba(61, 214, 140, 0.5);
+    }
+    .field textarea { min-height: 88px; resize: vertical; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .sheet-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .sheet-actions .btn { padding: 13px; }
+
+    .chat {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 12px;
+      max-height: 52dvh;
+      overflow: auto;
+    }
+    .bubble {
+      max-width: 92%;
+      padding: 12px 14px;
+      border-radius: 16px;
+      font-size: 0.9rem;
+      line-height: 1.45;
+      animation: rise 0.3s ease both;
+    }
+    .bubble.ai {
+      align-self: flex-start;
+      background: var(--bg2);
+      border: 1px solid var(--line);
+    }
+    .bubble.me {
+      align-self: flex-end;
+      background: var(--accent-dim);
+      border: 1px solid rgba(61, 214, 140, 0.25);
+    }
+    .composer {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+    }
+    .composer input {
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: var(--bg1);
+    }
+
+    .setup {
+      min-height: calc(100dvh - 40px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 18px;
+      padding: 12px 0 40px;
+    }
+    .setup h1 {
+      font-family: var(--font-display);
+      font-size: 2.6rem;
+      font-weight: 800;
+      letter-spacing: -0.045em;
+      margin: 0;
+      line-height: 0.95;
+    }
+    .setup h1 span { color: var(--accent); }
+    .setup p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.5;
+      max-width: 28ch;
+    }
+    .setup .btn.primary {
+      width: 100%;
+      padding: 15px;
+      font-size: 1rem;
+      margin-top: 8px;
+    }
+
+    .hidden { display: none !important; }
+    .result-box {
+      margin-top: 8px;
+      padding: 14px;
+      border-radius: 14px;
+      background: var(--accent-dim);
+      border: 1px solid rgba(61, 214, 140, 0.25);
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="app"></div>
+  <nav class="nav hidden" id="nav">
+    <button data-tab="ozet" class="active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5z"/></svg>
+      Özet
+    </button>
+    <button data-tab="krediler">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18M7 14h3"/></svg>
+      Krediler
+    </button>
+    <button data-tab="giderler">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M5 8h10a3 3 0 0 1 0 6H8a3 3 0 0 0 0 6h11"/></svg>
+      Giderler
+    </button>
+    <button data-tab="asistan">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a7 7 0 0 1 7 7c0 4-3 6-7 11-4-5-7-7-7-11a7 7 0 0 1 7-7z"/><circle cx="12" cy="10" r="2.2"/></svg>
+      Asistan
+    </button>
+  </nav>
+  <div class="sheet-bg" id="sheetBg"></div>
+  <div class="sheet" id="sheet"></div>
+
+  <script>
+    const KEY = "aylik-v1";
+    const TR_MONTHS = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+
+    const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+    const money = (n) => new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 0 }).format(n || 0);
+    const nowMonthKey = () => {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    };
+    const monthLabel = (key = nowMonthKey()) => {
+      const [y, m] = key.split("-").map(Number);
+      return `${TR_MONTHS[m - 1]} ${y}`;
+    };
+
+    function defaultState() {
+      return {
+        setupDone: false,
+        salary: 0,
+        payday: 1,
+        expenses: [],
+        credits: [],
+        memory: [],
+        chat: [],
+        tab: "ozet",
+      };
+    }
+
+    function load() {
+      try {
+        const raw = localStorage.getItem(KEY);
+        if (!raw) return defaultState();
+        return { ...defaultState(), ...JSON.parse(raw) };
+      } catch {
+        return defaultState();
+      }
+    }
+    function save(state) {
+      localStorage.setItem(KEY, JSON.stringify(state));
+    }
+
+    let state = load();
+    ensureInstallments(state);
+
+    function ensureInstallments(s) {
+      const mk = nowMonthKey();
+      s.credits.forEach((c) => {
+        if (!c.installments) c.installments = [];
+        const has = c.installments.some((i) => i.month === mk);
+        if (!has && c.remaining > 0) {
+          c.installments.push({
+            id: uid(),
+            month: mk,
+            amount: c.installmentAmount,
+            status: "due",
+            seq: c.totalInstallments - c.remaining + 1,
+          });
+        }
+      });
+    }
+
+    function monthExpensesTotal(s) {
+      return s.expenses.reduce((a, e) => a + Number(e.amount || 0), 0);
+    }
+
+    function monthDueInstallments(s) {
+      const mk = nowMonthKey();
+      const list = [];
+      s.credits.forEach((c) => {
+        (c.installments || []).forEach((i) => {
+          if (i.month === mk) list.push({ credit: c, inst: i });
+        });
+      });
+      return list;
+    }
+
+    function cashLeft(s) {
+      const due = monthDueInstallments(s)
+        .filter((x) => x.inst.status === "due" || x.inst.status === "overdue")
+        .reduce((a, x) => a + Number(x.inst.amount), 0);
+      const paid = monthDueInstallments(s)
+        .filter((x) => x.inst.status === "paid")
+        .reduce((a, x) => a + Number(x.inst.amount), 0);
+      // Remaining = salary - expenses - still unpaid dues - already paid (money already spent)
+      return Number(s.salary) - monthExpensesTotal(s) - due - paid;
+    }
+
+    function remember(note) {
+      state.memory.unshift({ id: uid(), at: Date.now(), note });
+      state.memory = state.memory.slice(0, 40);
+    }
+
+    function buildTip(s) {
+      const left = cashLeft(s);
+      const dues = monthDueInstallments(s).filter((x) => x.inst.status === "due" || x.inst.status === "overdue");
+      const deferred = monthDueInstallments(s).filter((x) => x.inst.status === "deferred");
+      if (!s.credits.length) return "Kredilerini ekle; taksit ve erken kapama hesabı burada toplanır.";
+      if (left < 0) return `Bu ay <strong>${money(Math.abs(left))}</strong> açık var. En düşük faizli olmayan, yüksek taksitli krediyi ertelemeyi Asistan’a sor.`;
+      if (dues.length && left < dues[0].inst.amount * 1.2) return `Nakit dar. <strong>${dues[0].credit.name}</strong> taksitini ertelemek sonraki ayı zorlaştırır — dikkat.`;
+      if (deferred.length >= 2) return "Bu ay birden fazla erteleme var; peş peşe erteleme faiz yükünü büyütür.";
+      const costly = [...s.credits].filter((c) => c.remaining > 0).sort((a, b) => b.rate - a.rate)[0];
+      if (costly && left > costly.installmentAmount * 3) {
+        return `Serbest paran var. En yüksek faizli <strong>${costly.name}</strong> için erken kapama hesabına bak.`;
+      }
+      return `Bu ay serbest yaklaşık <strong>${money(left)}</strong>. Vadesi gelen ${dues.length} taksit var.`;
+    }
+
+    function earlyCloseCalc(credit, payAmount) {
+      const remainingPrincipal = Number(credit.remainingPrincipal || credit.installmentAmount * credit.remaining);
+      const penaltyRate = Number(credit.earlyPenalty || 0) / 100;
+      const remainingSchedule = Number(credit.installmentAmount) * Number(credit.remaining);
+      const closeCost = remainingPrincipal + remainingPrincipal * penaltyRate;
+      const amount = Math.min(Number(payAmount) || closeCost, closeCost);
+      const savings = remainingSchedule - closeCost;
+      return { remainingPrincipal, closeCost, savings, amount, worth: savings > 0 };
+    }
+
+    function aiReply(q) {
+      const left = cashLeft(state);
+      const dues = monthDueInstallments(state).filter((x) => x.inst.status === "due" || x.inst.status === "overdue");
+      const text = (q || "").toLowerCase();
+      let answer = "";
+
+      if (/erte|sonraki|ödeyemem|yetmiyor/.test(text)) {
+        if (left >= 0 && dues.length) {
+          const soft = [...dues].sort((a, b) => a.credit.rate - b.credit.rate)[0];
+          answer = `Bu ay yaklaşık ${money(left)} kalıyor. Ertelemen gerekirse önce daha düşük faizli olanı ertele: ${soft.credit.name} (${money(soft.inst.amount)}). Yüksek faizli kredileri mümkünse öde.`;
+        } else if (left < 0) {
+          const soft = [...dues].sort((a, b) => a.credit.rate - b.credit.rate)[0];
+          answer = soft
+            ? `Açık ${money(Math.abs(left))}. ${soft.credit.name} taksitini erteleyebilirsin; unutma, sonraki aya eklenir ve peş peşe 2 erteleme riskli.`
+            : `Açık ${money(Math.abs(left))}. Giderleri kıs veya ek gelir ekle.`;
+        } else {
+          answer = "Şu an ertelemen şart değil görünüyor. Önce vadesi gelenleri öde.";
+        }
+      } else if (/erken|kapa|kapat/.test(text)) {
+        const best = [...state.credits].filter((c) => c.remaining > 0).sort((a, b) => b.rate - a.rate)[0];
+        if (!best) answer = "Aktif kredi yok. Önce Krediler sekmesinden ekle.";
+        else {
+          const r = earlyCloseCalc(best, null);
+          answer = r.worth
+            ? `${best.name} erken kapanırsa kabaca ${money(r.savings)} faiz tasarrufu (ceza sonrası). Krediler → Erken kapat ile net tutarı gör.`
+            : `${best.name} için ceza, tasarrufu yiyebilir. Erken kapama ekranında cezayı doğru gir.`;
+        }
+      } else if (/ne kadar|kalan|özet|durum/.test(text)) {
+        answer = `${monthLabel()} özeti: maaş ${money(state.salary)}, gider ${money(monthExpensesTotal(state))}, serbest ${money(left)}. Ödenecek taksit: ${dues.length}.`;
+      } else {
+        answer = buildTip(state).replace(/<\/?strong>/g, "");
+        if (state.memory[0]) answer += ` Hafızam: ${state.memory[0].note}`;
+      }
+
+      remember(`Soru: ${q.slice(0, 80)}`);
+      return answer;
+    }
+
+    // ---------- UI ----------
+    const app = document.getElementById("app");
+    const nav = document.getElementById("nav");
+    const sheet = document.getElementById("sheet");
+    const sheetBg = document.getElementById("sheetBg");
+
+    function closeSheet() {
+      sheet.classList.remove("open");
+      sheetBg.classList.remove("open");
+      sheet.innerHTML = "";
+    }
+    sheetBg.addEventListener("click", closeSheet);
+
+    function openSheet(html) {
+      sheet.innerHTML = `<div class="handle"></div>${html}`;
+      sheet.classList.add("open");
+      sheetBg.classList.add("open");
+    }
+
+    function persist() {
+      save(state);
+      render();
+    }
+
+    function render() {
+      if (!state.setupDone) {
+        nav.classList.add("hidden");
+        app.innerHTML = `
+          <div class="setup">
+            <div class="brand">Ayl<span>ık</span></div>
+            <h1>Paran,<br/>aylık net.</h1>
+            <p>Maaş, gider ve kredilerini kaydet. Öde, ertele, erken kapamayı hesapla — hepsi telefonda kalır.</p>
+            <div class="field"><label>Aylık maaş (TL)</label><input id="sSalary" type="number" inputmode="numeric" placeholder="ör. 45000" /></div>
+            <div class="field"><label>Maaş günü</label><input id="sPayday" type="number" min="1" max="28" value="1" /></div>
+            <button class="btn primary" id="startBtn">Başla</button>
+          </div>`;
+        document.getElementById("startBtn").onclick = () => {
+          const salary = Number(document.getElementById("sSalary").value);
+          const payday = Number(document.getElementById("sPayday").value) || 1;
+          if (!salary || salary < 0) return alert("Maaş gir.");
+          state.salary = salary;
+          state.payday = payday;
+          state.setupDone = true;
+          remember(`Kurulum: maaş ${money(salary)}, gün ${payday}`);
+          persist();
+        };
+        return;
+      }
+
+      nav.classList.remove("hidden");
+      [...nav.querySelectorAll("button")].forEach((b) => {
+        b.classList.toggle("active", b.dataset.tab === state.tab);
+      });
+
+      if (state.tab === "ozet") renderOzet();
+      else if (state.tab === "krediler") renderKrediler();
+      else if (state.tab === "giderler") renderGiderler();
+      else renderAsistan();
+    }
+
+    function header() {
+      return `<div class="brand-row"><div class="brand">Ayl<span>ık</span></div><div class="month-chip">${monthLabel()}</div></div>`;
+    }
+
+    function renderOzet() {
+      const left = cashLeft(state);
+      const dues = monthDueInstallments(state);
+      const dueN = dues.filter((x) => x.inst.status === "due" || x.inst.status === "overdue").length;
+      const paidN = dues.filter((x) => x.inst.status === "paid").length;
+      const defN = dues.filter((x) => x.inst.status === "deferred").length;
+
+      app.innerHTML = `
+        ${header()}
+        <section class="hero">
+          <div class="hero-label">Bu ay kalan</div>
+          <div class="hero-amount ${left < 0 ? "neg" : "pos"}">${money(left)}</div>
+          <div class="hero-sub">Maaş ${money(state.salary)} − giderler − taksitler</div>
+          <div class="tip">${buildTip(state)}</div>
+        </section>
+        <div class="stats">
+          <div class="stat"><b>${dueN}</b><span>ödenecek</span></div>
+          <div class="stat"><b>${paidN}</b><span>ödendi</span></div>
+          <div class="stat"><b>${defN}</b><span>ertelendi</span></div>
+        </div>
+        <div class="section-head"><h2>Bu ayın taksitleri</h2></div>
+        <div class="list" id="dueList"></div>
+        <div class="section-head" style="margin-top:18px"><h2>Yedek / aktar</h2></div>
+        <div class="item">
+          <div class="item-meta" style="margin-bottom:8px">Kayıtlar bu tarayıcıda. Başka linke taşımak için dışa aktar → Notlar’a yapıştır → yeni sitede içe aktar.</div>
+          <div class="actions">
+            <button class="btn primary" id="btnExport">Dışa aktar</button>
+            <button class="btn" id="btnImport">İçe aktar</button>
+          </div>
+        </div>
+      `;
+
+      document.getElementById("btnExport").onclick = exportBackup;
+      document.getElementById("btnImport").onclick = openImportSheet;
+
+      const list = document.getElementById("dueList");
+      if (!dues.length) {
+        list.innerHTML = `<div class="empty">Bu ay taksit yok. Krediler sekmesinden ekle.</div>`;
+        return;
+      }
+      dues
+        .sort((a, b) => statusRank(a.inst.status) - statusRank(b.inst.status))
+        .forEach(({ credit, inst }) => {
+          const el = document.createElement("div");
+          el.className = "item";
+          el.innerHTML = `
+            <div class="item-top">
+              <div>
+                <div class="item-title">${escapeHtml(credit.name)}</div>
+                <div class="item-meta">${credit.bank || "Banka"} · taksit ${inst.seq}/${credit.totalInstallments} · %${credit.rate}</div>
+              </div>
+              <div style="text-align:right">
+                <div class="item-amt">${money(inst.amount)}</div>
+                <span class="pill ${inst.status}">${statusLabel(inst.status)}</span>
+              </div>
+            </div>
+            ${inst.status === "due" || inst.status === "overdue" ? `
+              <div class="actions">
+                <button class="btn primary" data-act="pay">Öde</button>
+                <button class="btn warn" data-act="defer">Ertele</button>
+              </div>` : ""}
+          `;
+          el.querySelector('[data-act="pay"]')?.addEventListener("click", () => {
+            inst.status = "paid";
+            remember(`${credit.name} ödendi (${money(inst.amount)})`);
+            persist();
+          });
+          el.querySelector('[data-act="defer"]')?.addEventListener("click", () => deferInstallment(credit, inst));
+          list.appendChild(el);
+        });
+    }
+
+    function exportBackup() {
+      const payload = JSON.stringify({ v: 1, exportedAt: new Date().toISOString(), state }, null, 2);
+      openSheet(`
+        <h3>Dışa aktar</h3>
+        <p style="color:var(--muted);font-size:0.88rem;margin:0 0 10px">Bu metni kopyala, Notlar’a yapıştır. Yeni sitede İçe aktar ile geri yükle.</p>
+        <div class="field"><textarea id="exOut" readonly style="min-height:180px;font-size:0.72rem">${escapeHtml(payload)}</textarea></div>
+        <div class="sheet-actions">
+          <button class="btn" id="exClose">Kapat</button>
+          <button class="btn primary" id="exCopy">Kopyala</button>
+        </div>
+      `);
+      document.getElementById("exClose").onclick = closeSheet;
+      document.getElementById("exCopy").onclick = async () => {
+        const t = document.getElementById("exOut");
+        t.select();
+        try {
+          await navigator.clipboard.writeText(payload);
+          alert("Kopyalandı. Notlar’a yapıştır.");
+        } catch {
+          document.execCommand("copy");
+          alert("Seçildi — kopyala (paylaş menüsü) ile al.");
+        }
+      };
+    }
+
+    function openImportSheet() {
+      openSheet(`
+        <h3>İçe aktar</h3>
+        <p style="color:var(--muted);font-size:0.88rem;margin:0 0 10px">Eski yedek JSON’unu buraya yapıştır. Mevcut kayıtların üzerine yazar.</p>
+        <div class="field"><textarea id="imIn" placeholder='{"v":1,"state":{...}}' style="min-height:180px;font-size:0.72rem"></textarea></div>
+        <div class="sheet-actions">
+          <button class="btn" id="imClose">Vazgeç</button>
+          <button class="btn primary" id="imGo">Yükle</button>
+        </div>
+      `);
+      document.getElementById("imClose").onclick = closeSheet;
+      document.getElementById("imGo").onclick = () => {
+        const raw = document.getElementById("imIn").value.trim();
+        if (!raw) return alert("Yedek yapıştır.");
+        try {
+          const parsed = JSON.parse(raw);
+          const next = parsed.state || parsed;
+          if (!next || typeof next !== "object") throw new Error("bad");
+          state = { ...defaultState(), ...next, setupDone: true };
+          ensureInstallments(state);
+          remember("Yedek içe aktarıldı");
+          closeSheet();
+          persist();
+          alert("Aktarıldı.");
+        } catch {
+          alert("Geçersiz yedek. JSON’u tam yapıştır.");
+        }
+      };
+    }
+
+    function statusRank(s) {
+      return { overdue: 0, due: 1, deferred: 2, paid: 3, closed_early: 4 }[s] ?? 9;
+    }
+    function statusLabel(s) {
+      return { due: "ödenecek", paid: "ödendi", deferred: "ertelendi", overdue: "gecikti", closed_early: "erken kapandı" }[s] || s;
+    }
+
+    function nextMonthKey(key = nowMonthKey()) {
+      const [y, m] = key.split("-").map(Number);
+      const d = new Date(y, m, 1); // next month
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    }
+
+    function deferInstallment(credit, inst) {
+      if (!confirm(`${credit.name} taksitini sonraki aya bırakayım mı?`)) return;
+      inst.status = "deferred";
+      const nm = nextMonthKey(inst.month);
+      const exists = credit.installments.some((i) => i.month === nm && i.fromDefer === inst.id);
+      if (!exists) {
+        credit.installments.push({
+          id: uid(),
+          month: nm,
+          amount: inst.amount,
+          status: "due",
+          seq: inst.seq,
+          fromDefer: inst.id,
+        });
+      }
+      remember(`${credit.name} ertelendi → ${monthLabel(nm)}`);
+      persist();
+    }
+
+    function renderKrediler() {
+      app.innerHTML = `
+        ${header()}
+        <div class="section-head">
+          <h2>Kredilerim</h2>
+          <button class="btn primary" id="addCredit">+ Ekle</button>
+        </div>
+        <div class="list" id="creditList"></div>
+      `;
+      document.getElementById("addCredit").onclick = () => openCreditForm();
+      const list = document.getElementById("creditList");
+      if (!state.credits.length) {
+        list.innerHTML = `<div class="empty">Henüz kredi yok. İhtiyaç, kart, taşıt… ekle.</div>`;
+        return;
+      }
+      state.credits.forEach((c) => {
+        const el = document.createElement("div");
+        el.className = "item";
+        el.innerHTML = `
+          <div class="item-top">
+            <div>
+              <div class="item-title">${escapeHtml(c.name)}</div>
+              <div class="item-meta">${escapeHtml(c.bank || "—")} · ${c.type} · kalan ${c.remaining}/${c.totalInstallments} · faiz %${c.rate}</div>
+            </div>
+            <div class="item-amt">${money(c.installmentAmount)}</div>
+          </div>
+          <div class="actions">
+            <button class="btn primary" data-a="early">Erken kapat</button>
+            <button class="btn" data-a="edit">Düzenle</button>
+            <button class="btn danger" data-a="del">Sil</button>
+          </div>
+        `;
+        el.querySelector('[data-a="early"]').onclick = () => openEarly(c);
+        el.querySelector('[data-a="edit"]').onclick = () => openCreditForm(c);
+        el.querySelector('[data-a="del"]').onclick = () => {
+          if (!confirm("Bu krediyi sil?")) return;
+          state.credits = state.credits.filter((x) => x.id !== c.id);
+          remember(`${c.name} silindi`);
+          persist();
+        };
+        list.appendChild(el);
+      });
+    }
+
+    function openCreditForm(existing) {
+      const c = existing || {
+        name: "", bank: "", type: "ihtiyac", installmentAmount: "", totalInstallments: "",
+        remaining: "", rate: "", remainingPrincipal: "", earlyPenalty: "1",
+      };
+      openSheet(`
+        <h3>${existing ? "Krediyi düzenle" : "Yeni kredi"}</h3>
+        <div class="field"><label>Ad</label><input id="cName" value="${escapeAttr(c.name)}" placeholder="İhtiyaç kredisi" /></div>
+        <div class="row2">
+          <div class="field"><label>Banka</label><input id="cBank" value="${escapeAttr(c.bank || "")}" placeholder="Ziraat" /></div>
+          <div class="field"><label>Tür</label>
+            <select id="cType">
+              ${["ihtiyac","kart","tasit","konut","diger"].map((t) => `<option value="${t}" ${c.type===t?"selected":""}>${t}</option>`).join("")}
+            </select>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Aylık taksit (TL)</label><input id="cAmt" type="number" value="${c.installmentAmount || ""}" /></div>
+          <div class="field"><label>Faiz % (yıllık approx)</label><input id="cRate" type="number" step="0.1" value="${c.rate || ""}" /></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Toplam taksit</label><input id="cTotal" type="number" value="${c.totalInstallments || ""}" /></div>
+          <div class="field"><label>Kalan taksit</label><input id="cRem" type="number" value="${c.remaining || ""}" /></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Kalan anapara (TL)</label><input id="cPrin" type="number" value="${c.remainingPrincipal || ""}" placeholder="opsiyonel" /></div>
+          <div class="field"><label>Erken kapama cezası %</label><input id="cPen" type="number" step="0.1" value="${c.earlyPenalty ?? 1}" /></div>
+        </div>
+        <div class="sheet-actions">
+          <button class="btn" id="cCancel">Vazgeç</button>
+          <button class="btn primary" id="cSave">Kaydet</button>
+        </div>
+      `);
+      document.getElementById("cCancel").onclick = closeSheet;
+      document.getElementById("cSave").onclick = () => {
+        const data = {
+          name: document.getElementById("cName").value.trim(),
+          bank: document.getElementById("cBank").value.trim(),
+          type: document.getElementById("cType").value,
+          installmentAmount: Number(document.getElementById("cAmt").value),
+          rate: Number(document.getElementById("cRate").value) || 0,
+          totalInstallments: Number(document.getElementById("cTotal").value),
+          remaining: Number(document.getElementById("cRem").value),
+          remainingPrincipal: Number(document.getElementById("cPrin").value) || 0,
+          earlyPenalty: Number(document.getElementById("cPen").value) || 0,
+        };
+        if (!data.name || !data.installmentAmount || !data.totalInstallments || !data.remaining) {
+          return alert("Ad, taksit, toplam ve kalan zorunlu.");
+        }
+        if (existing) {
+          Object.assign(existing, data);
+          remember(`${data.name} güncellendi`);
+        } else {
+          const credit = { id: uid(), installments: [], ...data };
+          state.credits.push(credit);
+          ensureInstallments(state);
+          remember(`${data.name} eklendi`);
+        }
+        closeSheet();
+        persist();
+      };
+    }
+
+    function openEarly(credit) {
+      const guessPrin = credit.remainingPrincipal || credit.installmentAmount * credit.remaining;
+      openSheet(`
+        <h3>Erken kapama</h3>
+        <p style="color:var(--muted);margin:0 0 12px;font-size:0.9rem">${escapeHtml(credit.name)} · kalan ${credit.remaining} taksit</p>
+        <div class="field"><label>Kalan anapara (TL)</label><input id="ePrin" type="number" value="${guessPrin}" /></div>
+        <div class="field"><label>Erken kapama cezası %</label><input id="ePen" type="number" step="0.1" value="${credit.earlyPenalty ?? 1}" /></div>
+        <div class="field"><label>Ödeyebileceğin tutar (boş = tam kapat)</label><input id="ePay" type="number" placeholder="opsiyonel" /></div>
+        <button class="btn primary" id="eCalc" style="width:100%;padding:13px;margin-bottom:8px">Hesapla</button>
+        <div id="eResult"></div>
+        <div class="sheet-actions">
+          <button class="btn" id="eClose">Kapat</button>
+          <button class="btn primary" id="eApply">Tamamen kapattım</button>
+        </div>
+      `);
+      const run = () => {
+        credit.remainingPrincipal = Number(document.getElementById("ePrin").value) || 0;
+        credit.earlyPenalty = Number(document.getElementById("ePen").value) || 0;
+        const r = earlyCloseCalc(credit, document.getElementById("ePay").value);
+        document.getElementById("eResult").innerHTML = `
+          <div class="result-box">
+            Kapanış tutarı: <strong>${money(r.closeCost)}</strong><br/>
+            Kalan taksitler toplamı: ${money(credit.installmentAmount * credit.remaining)}<br/>
+            Net tasarruf: <strong style="color:${r.worth ? "var(--accent)" : "var(--danger)"}">${money(r.savings)}</strong><br/>
+            ${r.worth ? "Değer görünüyor — cezaya rağmen faiz kazanıyorsun." : "Ceza tasarrufu yiyor; dikkatli ol."}
+          </div>`;
+      };
+      document.getElementById("eCalc").onclick = run;
+      document.getElementById("eClose").onclick = closeSheet;
+      document.getElementById("eApply").onclick = () => {
+        run();
+        credit.remaining = 0;
+        const mk = nowMonthKey();
+        (credit.installments || []).forEach((i) => {
+          if (i.month === mk && (i.status === "due" || i.status === "overdue")) i.status = "closed_early";
+        });
+        remember(`${credit.name} erken kapatıldı`);
+        closeSheet();
+        persist();
+      };
+      run();
+    }
+
+    function renderGiderler() {
+      app.innerHTML = `
+        ${header()}
+        <div class="section-head">
+          <h2>Gelir & gider</h2>
+          <button class="btn primary" id="addExp">+ Gider</button>
+        </div>
+        <div class="item" style="margin-bottom:10px">
+          <div class="item-top">
+            <div>
+              <div class="item-title">Maaş</div>
+              <div class="item-meta">Her ayın ${state.payday}. günü</div>
+            </div>
+            <div class="item-amt" style="color:var(--accent)">${money(state.salary)}</div>
+          </div>
+          <div class="actions">
+            <button class="btn" id="editSalary">Maaşı düzenle</button>
+          </div>
+        </div>
+        <div class="list" id="expList"></div>
+      `;
+      document.getElementById("addExp").onclick = () => openExpenseForm();
+      document.getElementById("editSalary").onclick = () => {
+        openSheet(`
+          <h3>Maaş</h3>
+          <div class="field"><label>Aylık maaş</label><input id="sal" type="number" value="${state.salary}" /></div>
+          <div class="field"><label>Maaş günü</label><input id="pay" type="number" min="1" max="28" value="${state.payday}" /></div>
+          <div class="sheet-actions">
+            <button class="btn" id="x">Vazgeç</button>
+            <button class="btn primary" id="s">Kaydet</button>
+          </div>
+        `);
+        document.getElementById("x").onclick = closeSheet;
+        document.getElementById("s").onclick = () => {
+          state.salary = Number(document.getElementById("sal").value) || 0;
+          state.payday = Number(document.getElementById("pay").value) || 1;
+          remember(`Maaş güncellendi: ${money(state.salary)}`);
+          closeSheet();
+          persist();
+        };
+      };
+      const list = document.getElementById("expList");
+      if (!state.expenses.length) {
+        list.innerHTML = `<div class="empty">Kira, fatura, market… ekle. Tekrarlayan giderler her ay düşülür.</div>`;
+        return;
+      }
+      state.expenses.forEach((e) => {
+        const el = document.createElement("div");
+        el.className = "item";
+        el.innerHTML = `
+          <div class="item-top">
+            <div>
+              <div class="item-title">${escapeHtml(e.name)}</div>
+              <div class="item-meta">${e.category}${e.required ? " · zorunlu" : ""}</div>
+            </div>
+            <div class="item-amt">${money(e.amount)}</div>
+          </div>
+          <div class="actions">
+            <button class="btn" data-a="edit">Düzenle</button>
+            <button class="btn danger" data-a="del">Sil</button>
+          </div>
+        `;
+        el.querySelector('[data-a="edit"]').onclick = () => openExpenseForm(e);
+        el.querySelector('[data-a="del"]').onclick = () => {
+          state.expenses = state.expenses.filter((x) => x.id !== e.id);
+          persist();
+        };
+        list.appendChild(el);
+      });
+    }
+
+    function openExpenseForm(existing) {
+      const e = existing || { name: "", amount: "", category: "kira", required: true };
+      openSheet(`
+        <h3>${existing ? "Gideri düzenle" : "Yeni gider"}</h3>
+        <div class="field"><label>Ad</label><input id="eName" value="${escapeAttr(e.name)}" placeholder="Kira" /></div>
+        <div class="row2">
+          <div class="field"><label>Tutar (TL)</label><input id="eAmt" type="number" value="${e.amount || ""}" /></div>
+          <div class="field"><label>Kategori</label>
+            <select id="eCat">
+              ${["kira","fatura","market","ulasim","abonelik","diger"].map((c) => `<option ${e.category===c?"selected":""}>${c}</option>`).join("")}
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label><input type="checkbox" id="eReq" ${e.required ? "checked" : ""} /> Zorunlu gider</label>
+        </div>
+        <div class="sheet-actions">
+          <button class="btn" id="c">Vazgeç</button>
+          <button class="btn primary" id="s">Kaydet</button>
+        </div>
+      `);
+      document.getElementById("c").onclick = closeSheet;
+      document.getElementById("s").onclick = () => {
+        const data = {
+          name: document.getElementById("eName").value.trim(),
+          amount: Number(document.getElementById("eAmt").value),
+          category: document.getElementById("eCat").value,
+          required: document.getElementById("eReq").checked,
+        };
+        if (!data.name || !data.amount) return alert("Ad ve tutar gir.");
+        if (existing) Object.assign(existing, data);
+        else state.expenses.push({ id: uid(), ...data });
+        closeSheet();
+        persist();
+      };
+    }
+
+    function renderAsistan() {
+      if (!state.chat.length) {
+        state.chat = [{ role: "ai", text: "Merhaba. Verilerin telefonda duruyor. Sor: “bu ay erteleyebilir miyim?”, “erken kapama değer mi?”, “özet”." }];
+      }
+      app.innerHTML = `
+        ${header()}
+        <div class="section-head"><h2>Asistan</h2></div>
+        <div class="chat" id="chat"></div>
+        <div class="composer">
+          <input id="q" placeholder="Sorunu yaz…" />
+          <button class="btn primary" id="send">Gönder</button>
+        </div>
+        <div style="margin-top:14px">
+          <div class="section-head"><h2 style="font-size:1rem">Hafıza</h2></div>
+          <div class="list" id="mem"></div>
+        </div>
+      `;
+      const chat = document.getElementById("chat");
+      state.chat.slice(-30).forEach((m) => {
+        const b = document.createElement("div");
+        b.className = `bubble ${m.role === "me" ? "me" : "ai"}`;
+        b.textContent = m.text;
+        chat.appendChild(b);
+      });
+      chat.scrollTop = chat.scrollHeight;
+      const mem = document.getElementById("mem");
+      if (!state.memory.length) mem.innerHTML = `<div class="empty">Henüz not yok.</div>`;
+      else state.memory.slice(0, 8).forEach((m) => {
+        const el = document.createElement("div");
+        el.className = "item";
+        el.innerHTML = `<div class="item-meta">${new Date(m.at).toLocaleString("tr-TR")}</div><div>${escapeHtml(m.note)}</div>`;
+        mem.appendChild(el);
+      });
+
+      const send = () => {
+        const input = document.getElementById("q");
+        const q = input.value.trim();
+        if (!q) return;
+        state.chat.push({ role: "me", text: q });
+        state.chat.push({ role: "ai", text: aiReply(q) });
+        input.value = "";
+        persist();
+      };
+      document.getElementById("send").onclick = send;
+      document.getElementById("q").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") send();
+      });
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
+    }
+    function escapeAttr(s) { return escapeHtml(s).replace(/\n/g, " "); }
+
+    nav.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-tab]");
+      if (!btn) return;
+      state.tab = btn.dataset.tab;
+      persist();
+    });
+
+    // overdue mark
+    (function markOverdue() {
+      const today = new Date().getDate();
+      if (today <= state.payday) return;
+      const mk = nowMonthKey();
+      state.credits.forEach((c) => {
+        (c.installments || []).forEach((i) => {
+          if (i.month === mk && i.status === "due" && today > 25) i.status = "overdue";
+        });
+      });
+    })();
+
+    render();
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./sw.js").catch(() => {});
+    }
+  </script>
+</body>
+</html>
