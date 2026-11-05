@@ -456,6 +456,14 @@
       return `${TR_MONTHS[m - 1]} ${y}`;
     };
 
+    const KEY_API = "aylik-gemini-key";
+    const GEMINI_MODELS = [
+      "gemini-2.5-flash",
+      "gemini-2.0-flash",
+      "gemini-flash-latest",
+      "gemini-3.6-flash",
+    ];
+
     function defaultState() {
       return {
         setupDone: false,
@@ -480,6 +488,12 @@
     }
     function save(state) {
       localStorage.setItem(KEY, JSON.stringify(state));
+    }
+    function getApiKey() {
+      return (localStorage.getItem(KEY_API) || "").trim();
+    }
+    function setApiKey(k) {
+      localStorage.setItem(KEY_API, (k || "").trim());
     }
 
     let state = load();
@@ -558,7 +572,48 @@
       return { remainingPrincipal, closeCost, savings, amount, worth: savings > 0 };
     }
 
-    function aiReply(q) {
+    function financeSnapshot() {
+      const left = cashLeft(state);
+      const dues = monthDueInstallments(state);
+      return {
+        ay: monthLabel(),
+        maas: state.salary,
+        maasGunu: state.payday,
+        buAyKalan: left,
+        giderToplam: monthExpensesTotal(state),
+        giderler: state.expenses.map((e) => ({
+          ad: e.name,
+          tutar: e.amount,
+          kategori: e.category,
+          zorunlu: !!e.required,
+        })),
+        krediler: state.credits.map((c) => {
+          const early = earlyCloseCalc(c, null);
+          return {
+            ad: c.name,
+            banka: c.bank,
+            tur: c.type,
+            aylikTaksit: c.installmentAmount,
+            faizYuzde: c.rate,
+            kalanTaksit: c.remaining,
+            toplamTaksit: c.totalInstallments,
+            kalanAnapara: c.remainingPrincipal || null,
+            erkenKapamaCezasiYuzde: c.earlyPenalty,
+            erkenKapamaTutari: early.closeCost,
+            erkenKapamaTasarruf: early.savings,
+          };
+        }),
+        buAyTaksitler: dues.map(({ credit, inst }) => ({
+          kredi: credit.name,
+          tutar: inst.amount,
+          durum: inst.status,
+          sira: inst.seq,
+        })),
+        hafiza: state.memory.slice(0, 12).map((m) => m.note),
+      };
+    }
+
+    function localAiReply(q) {
       const left = cashLeft(state);
       const dues = monthDueInstallments(state).filter((x) => x.inst.status === "due" || x.inst.status === "overdue");
       const text = (q || "").toLowerCase();
@@ -591,9 +646,111 @@
         answer = buildTip(state).replace(/<\/?strong>/g, "");
         if (state.memory[0]) answer += ` Hafızam: ${state.memory[0].note}`;
       }
-
-      remember(`Soru: ${q.slice(0, 80)}`);
       return answer;
+    }
+
+    function financeSystemPrompt() {
+      return [
+        "Sen Aylık uygulamasının Finans Ajanısın. Kullanıcı Türkiye'de; para birimi TRY.",
+        "Görevin: maaş, gider, kredi, taksit, erteleme ve erken kapama konusunda net, kısa, uygulanabilir tavsiye vermek.",
+        "Sadece verilen veri özetine dayan. Uydurma banka bakiyesi veya bilmediğin faiz yazma.",
+        "Türkçe konuş. Madde madde yazabilirsin. Bankacılık işlemi yapamazsın; kullanıcıya ne yapacağını söyle.",
+        "Erteleme peş peşe risklidir. Yüksek faizli borcu önce kapatmayı tercih et.",
+        "Yasal/finansal tavsiye değil, kişisel plan asistanısın; abartılı garanti verme.",
+      ].join(" ");
+    }
+
+    async function callGemini(question) {
+      const key = getApiKey();
+      if (!key) throw new Error("NO_KEY");
+      const snap = financeSnapshot();
+      const userText = [
+        "Kullanıcı sorusu:",
+        question,
+        "",
+        "Güncel finans verisi (JSON):",
+        JSON.stringify(snap, null, 2),
+      ].join("\n");
+
+      const body = {
+        systemInstruction: { parts: [{ text: financeSystemPrompt() }] },
+        contents: [{ role: "user", parts: [{ text: userText }] }],
+        generationConfig: { temperature: 0.4, maxOutputTokens: 1024 },
+      };
+
+      let lastErr = null;
+      for (const model of GEMINI_MODELS) {
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
+          const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            const msg = data?.error?.message || res.statusText || "API hatası";
+            lastErr = new Error(msg);
+            if (res.status === 404 || /not found|not supported/i.test(msg)) continue;
+            throw lastErr;
+          }
+          const text = (data?.candidates || [])
+            .flatMap((c) => c?.content?.parts || [])
+            .map((p) => p.text || "")
+            .join("")
+            .trim();
+          if (!text) throw new Error("Boş cevap");
+          return text;
+        } catch (e) {
+          lastErr = e;
+          if (e.message === "NO_KEY") throw e;
+        }
+      }
+      throw lastErr || new Error("Model yanıt vermedi");
+    }
+
+    async function aiReply(q) {
+      remember(`Soru: ${q.slice(0, 80)}`);
+      try {
+        if (!getApiKey()) return localAiReply(q);
+        return await callGemini(q);
+      } catch (e) {
+        if (e.message === "NO_KEY") return localAiReply(q);
+        const fallback = localAiReply(q);
+        return `Finans ajanına ulaşılamadı (${e.message}). Yerel özet:\n\n${fallback}`;
+      }
+    }
+
+    function openApiKeySheet() {
+      openSheet(`
+        <h3>Finans ajanı (Gemini)</h3>
+        <p style="color:var(--muted);font-size:0.88rem;margin:0 0 10px;line-height:1.45">
+          Ücretsiz Google AI Studio anahtarı ile gerçek yapay zeka cevapları. Anahtar sadece bu telefonda saklanır; yedek JSON’a girmez.
+        </p>
+        <div class="field">
+          <label>Gemini API key</label>
+          <input id="apiKeyIn" type="password" autocomplete="off" placeholder="AIza..." value="${escapeAttr(getApiKey())}" />
+        </div>
+        <p style="color:var(--muted);font-size:0.8rem;margin:0 0 12px;line-height:1.4">
+          Anahtar al: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--accent)">aistudio.google.com/apikey</a>
+        </p>
+        <div class="sheet-actions">
+          <button class="btn" id="apiClear">Sil</button>
+          <button class="btn primary" id="apiSave">Kaydet</button>
+        </div>
+      `);
+      document.getElementById("apiClear").onclick = () => {
+        setApiKey("");
+        closeSheet();
+        persist();
+      };
+      document.getElementById("apiSave").onclick = () => {
+        const v = document.getElementById("apiKeyIn").value.trim();
+        if (!v) return alert("Anahtar yapıştır.");
+        setApiKey(v);
+        closeSheet();
+        persist();
+      };
     }
 
     // ---------- UI ----------
@@ -1078,15 +1235,27 @@
     }
 
     function renderAsistan() {
+      const keyed = !!getApiKey();
       if (!state.chat.length) {
-        state.chat = [{ role: "ai", text: "Merhaba. Verilerin telefonda duruyor. Sor: “bu ay erteleyebilir miyim?”, “erken kapama değer mi?”, “özet”." }];
+        state.chat = [{
+          role: "ai",
+          text: keyed
+            ? "Finans ajanı hazır. Maaş, gider ve kredilerine göre sor: “bu ay erteleyebilir miyim?”, “hangi krediyi önce kapatayım?”, “erken kapama değer mi?”."
+            : "Finans ajanını açmak için sağ üstten API key ekle (ücretsiz Gemini). Key yokken de yerel kurallarla cevaplarım.",
+        }];
       }
       app.innerHTML = `
         ${header()}
-        <div class="section-head"><h2>Asistan</h2></div>
+        <div class="section-head">
+          <h2>Finans ajanı</h2>
+          <button class="btn ${keyed ? "" : "primary"}" id="apiBtn">${keyed ? "API key" : "+ API key"}</button>
+        </div>
+        <div class="item-meta" style="margin:-4px 0 10px">
+          ${keyed ? "Gemini bağlı · verin soruya eklenir, anahtar telefonda kalır" : "Henüz Gemini yok · yerel mod"}
+        </div>
         <div class="chat" id="chat"></div>
         <div class="composer">
-          <input id="q" placeholder="Sorunu yaz…" />
+          <input id="q" placeholder="Finans ajanına sor…" />
           <button class="btn primary" id="send">Gönder</button>
         </div>
         <div style="margin-top:14px">
@@ -1094,6 +1263,7 @@
           <div class="list" id="mem"></div>
         </div>
       `;
+      document.getElementById("apiBtn").onclick = openApiKeySheet;
       const chat = document.getElementById("chat");
       state.chat.slice(-30).forEach((m) => {
         const b = document.createElement("div");
@@ -1111,13 +1281,22 @@
         mem.appendChild(el);
       });
 
-      const send = () => {
+      let busy = false;
+      const send = async () => {
+        if (busy) return;
         const input = document.getElementById("q");
         const q = input.value.trim();
         if (!q) return;
+        busy = true;
         state.chat.push({ role: "me", text: q });
-        state.chat.push({ role: "ai", text: aiReply(q) });
         input.value = "";
+        state.chat.push({ role: "ai", text: "Düşünüyorum…" });
+        persist();
+        const answer = await aiReply(q);
+        const last = state.chat[state.chat.length - 1];
+        if (last && last.role === "ai") last.text = answer;
+        else state.chat.push({ role: "ai", text: answer });
+        busy = false;
         persist();
       };
       document.getElementById("send").onclick = send;
